@@ -1,7 +1,8 @@
-PORT = 8088
-RELOAD = True
-DEBUG = True
-DEFAULT_API_KEYS = "ocigenerativeai"
+import os
+PORT = os.getenv("OCI_GW_PORT")
+RELOAD = os.getenv("OCI_GW_RELOAD")
+DEBUG = os.getenv("OCI_GW_DEBUG")
+DEFAULT_API_KEYS = os.getenv("DEFAULT_API_KEYS")
 API_ROUTE_PREFIX = "/api/v1"
 
 EMBED_TRUNCATE = "END"
@@ -12,9 +13,9 @@ EMBED_TRUNCATE = "END"
 
 
 # AUTH_TYPE can be "API_KEY" or "INSTANCE_PRINCIPAL"
-AUTH_TYPE = "API_KEY"
-OCI_CONFIG_FILE = "~/.oci/config"
-OCI_CONFIG_FILE_KEY = "DEFAULT"
+AUTH_TYPE = os.getenv("AUTH_TYPE")
+OCI_CONFIG_FILE= os.getenv("OCI_CONFIG_FILE")
+OCI_CONFIG_FILE_KEY = os.getenv("OCI_CONFIG_FILE_KEY")
 INFERENCE_ENDPOINT_TEMPLATE = "https://inference.generativeai.{region}.oci.oraclecloud.com/20231130"
 
 TITLE = "OCI Generative AI Proxy APIs"

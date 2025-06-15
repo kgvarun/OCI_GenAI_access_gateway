@@ -1,0 +1,23 @@
+
+services:
+  oci-genai-gateway-v2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: oci-genai-gateway
+    environment:
+      - OCI_CONFIG_DIRECTORY=${OCI_CONFIG_DIRECTORY}
+      - OCI_CONFIG_FILE_KEY=${OCI_CONFIG_FILE_KEY}
+      - OCI_CONFIG_FILE=${OCI_CONFIG_FILE}
+      - DEFAULT_API_KEYS=${DEFAULT_API_KEYS}
+      - AUTH_TYPE=${AUTH_TYPE}
+      - OCI_GW_PORT=${OCI_GW_PORT}
+      - OCI_GW_RELOAD=${OCI_GW_RELOAD}
+      - OCI_GW_DEBUG=${OCI_GW_DEBUG}
+    volumes:
+      - ${OCI_CONFIG_DIRECTORY}:/root/.oci
+      - ./app/config.py:/app/config.py
+      - ./app/models.yaml:/app/models.yaml
+    ports:
+      - ${OCI_GW_PORT}:8088
+    restart: unless-stopped

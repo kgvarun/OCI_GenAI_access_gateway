@@ -5,6 +5,7 @@ import re
 import time
 from abc import ABC
 from typing import AsyncIterable, Iterable, Literal
+from collections.abc import Iterable
 
 import oci
 from oci.generative_ai_inference import models as oci_models
@@ -134,37 +135,38 @@ class OCIGenAIModel(BaseChatModel):
 
     def chat_stream(self, chat_request: ChatRequest) -> AsyncIterable[bytes]:
         """Default implementation for Chat Stream API"""
-        # print("="*20,str(chat_request))
         response = self._invoke_genai(chat_request)
         if not response.data:
             raise HTTPException(status_code=500, detail="OCI AI API returned empty response")
 
-        # message_id = self.generate_message_id()
         message_id = response.request_id
         model_id = SUPPORTED_OCIGENAI_CHAT_MODELS[chat_request.model]["model_id"]
+        provider = SUPPORTED_OCIGENAI_CHAT_MODELS[chat_request.model]["provider"]
+        
         events = response.data.events()
         for stream in events:
-            chunk = json.loads(stream.data)
-            stream_response = self._create_response_stream(
-                model_id=model_id, message_id=message_id, chunk=chunk
-            )
-            if not stream_response:
+            try:
+                chunk = json.loads(stream.data)
+                if DEBUG:
+                    logger.info("Raw chunk: " + str(chunk))
+                
+                stream_response = self._create_response_stream(
+                    model_id=model_id, message_id=message_id, chunk=chunk
+                )
+                if not stream_response:
+                    continue
+                if DEBUG:
+                    logger.info("Proxy response :" + stream_response.model_dump_json())
+                if stream_response.choices:
+                    yield self.stream_response_to_bytes(stream_response)
+                elif (
+                        chat_request.stream_options
+                        and chat_request.stream_options.include_usage
+                ):
+                    yield self.stream_response_to_bytes(stream_response)
+            except Exception as e:
+                logger.error(f"Error processing stream chunk: {e}")
                 continue
-            if DEBUG:
-                logger.info("Proxy response :" + stream_response.model_dump_json())
-            if stream_response.choices:
-                yield self.stream_response_to_bytes(stream_response)
-            elif (
-                    chat_request.stream_options
-                    and chat_request.stream_options.include_usage
-            ):
-                # An empty choices for Usage as per OpenAI doc below:
-                # if you set stream_options: {"include_usage": true}.
-                # an additional chunk will be streamed before the data: [DONE] message.
-                # The usage field on this chunk shows the token usage statistics for the entire request,
-                # and the choices field will always be an empty array.
-                # All other chunks will also include a usage field, but with a null value.
-                yield self.stream_response_to_bytes(stream_response)
 
         # return an [DONE] message at the end.
         yield self.stream_response_to_bytes()
@@ -250,18 +252,24 @@ class OCIGenAIModel(BaseChatModel):
         system_prompts = self._parse_system_prompts(chat_request)
         
 
-        # Base inference parameters.        
+        # Base inference parameters - start with common parameters
         inference_config = {
-            "max_tokens": chat_request.max_tokens,
             "is_stream": chat_request.stream,
             "frequency_penalty": chat_request.frequency_penalty,
             "presence_penalty": chat_request.presence_penalty,
             "temperature": chat_request.temperature,
             "top_p": chat_request.top_p
-            }
+        }
 
+        # Add max tokens based on provider
         model_name = chat_request.model
         provider = SUPPORTED_OCIGENAI_CHAT_MODELS[model_name]["provider"]
+        if provider == "openai":
+            # Don't include max_completion_tokens in initial config
+            pass
+        else:
+            inference_config["max_tokens"] = chat_request.max_tokens
+
         compartment_id = SUPPORTED_OCIGENAI_CHAT_MODELS[model_name]["compartment_id"]
 
         if provider == "dedicated":
@@ -409,35 +417,84 @@ class OCIGenAIModel(BaseChatModel):
                 meta_messages.append(meta_message)
             generic_chatRequest.messages = meta_messages
             chat_detail.chat_request = generic_chatRequest
+
+        # ---------------------------------------------------------------------
+        # OpenAI‐style chat models (hosted on OCI GenAI)
+        # ---------------------------------------------------------------------
+        elif provider == "openai":
+            # Create OpenAI-style chat request
+            generic_chatRequest = oci_models.GenericChatRequest(**inference_config)
+            generic_chatRequest.api_format = oci_models.BaseChatRequest.API_FORMAT_GENERIC
+            generic_chatRequest.max_completion_tokens = chat_request.max_tokens
+
+            # Handle system messages
+            if system_prompts:
+                system_message = oci_models.Message()
+                system_message.role = "SYSTEM"
+                system_message.content = [
+                    oci_models.TextContent(text=prompt)
+                    for prompt in system_prompts
+                ]
+                oci_messages = [system_message]
+            else:
+                oci_messages = []
+
+            # Convert messages to OCI format
+            for msg in messages:
+                oci_msg = oci_models.Message()
+                oci_msg.role = msg["role"].upper()
+                
+                if "tool_calls" in msg:
+                    # Handle tool calls
+                    oci_msg.tool_calls = Convertor.convert_tool_calls_openai_to_oci_openai(msg["tool_calls"])
+                    oci_msg.content = []  # Tool calls don't have content
+                else:
+                    # Handle regular content
+                    oci_msg.content = [
+                        oci_models.TextContent(text=part["text"])
+                        for part in msg["content"]
+                    ]
+                oci_messages.append(oci_msg)
+
+            # Attach function definitions if present
+            if chat_request.tools:
+                generic_chatRequest.tools = Convertor.convert_tools_openai_to_oci_openai(chat_request.tools)
+
+            generic_chatRequest.messages = oci_messages
+            chat_detail.chat_request = generic_chatRequest
+
         return chat_detail
 
     def _create_response(
             self,
             model: str,
             message_id: str,
-            # content: list[dict] = None,
             chat_response = None,
-            # finish_reason: str | None = None,
             input_tokens: int = 0,
             output_tokens: int = 0,
     ) -> ChatResponse:
         message = ChatResponseMessage(role="assistant")
+        
         if type(chat_response) == oci_models.CohereChatResponse:
             finish_reason = chat_response.finish_reason
             if chat_response.tool_calls:
-                oepnai_tool_calls = Convertor.convert_tool_calls_cohere_to_openai(chat_response.tool_calls)
-                message.tool_calls = oepnai_tool_calls
+                message.tool_calls = Convertor.convert_tool_calls_cohere_to_openai(chat_response.tool_calls)
                 message.content = None
             else:
                 message.content = chat_response.text
         elif type(chat_response) == oci_models.GenericChatResponse:
-            finish_reason = chat_response.choices[-1].finish_reason
-            if chat_response.choices[0].finish_reason == "tool_calls":
-                oepnai_tool_calls = Convertor.convert_tool_calls_llama_to_openai(chat_response.choices[0].message.tool_calls)
-                message.tool_calls = oepnai_tool_calls
+            choice = chat_response.choices[0]
+            finish_reason = choice.finish_reason
+            
+            if choice.message.tool_calls:
+                # Handle tool calls
+                message.tool_calls = Convertor.convert_tool_calls_oci_openai_to_openai(choice.message.tool_calls)
                 message.content = None
+            elif choice.message.content:
+                # Handle regular content
+                message.content = choice.message.content[0].text
             else:
-                message.content = chat_response.choices[0].message.content[0].text
+                message.content = None
 
         response = ChatResponse(
             id = message_id,
@@ -470,48 +527,89 @@ class OCIGenAIModel(BaseChatModel):
         """
         if DEBUG:
             logger.info("OCI GenAI response chunk: " + str(chunk))
+            
         finish_reason = None
         message = None
         usage = None
-        text = None
-        openai_tool_calls = None
+
         if "finishReason" not in chunk:
-            if model_id.startswith("cohere"):
-                if "tooCalls" not in chunk:
-                    text = chunk["text"]
+            if "choices" in chunk:
+                choice = chunk["choices"][0]
+                delta = choice.get("delta", {})
+                
+                if "tool_calls" in delta:
+                    # Handle tool calls in streaming
+                    tool_calls = Convertor.convert_tool_calls_oci_openai_to_openai(delta["tool_calls"])
                     message = ChatResponseMessage(
                         role="assistant",
-                        content=text,
-                        tool_calls=openai_tool_calls
-                        )
-                elif "toolCalls" in chunk:
-                    # pass
-                    openai_tool_calls = Convertor.convert_tool_calls_cohere_to_openai(chunk["toolCalls"])
-                    message = ChatResponseMessage(
-                        role="assistant",
-                        tool_calls=openai_tool_calls
-                        )
-            elif model_id.startswith("meta"):
-                if "content" in chunk["message"]:
-                    if chunk["message"]["content"]:
-                        text = chunk["message"]["content"][0]["text"]
-                    else:
-                        text = ""
-                elif "toolCalls" in chunk["message"]:
-                    text = ""
-                    openai_tool_calls = Convertor.convert_tool_calls_llama_to_openai(chunk["message"]["toolCalls"])
-                message = ChatResponseMessage(
-                    role="assistant",
-                    content=text,
-                    tool_calls=openai_tool_calls
+                        tool_calls=tool_calls
                     )
+                elif "content" in delta:
+                    # Handle regular content in streaming
+                    message = ChatResponseMessage(
+                        role="assistant",
+                        content=delta["content"]
+                    )
+                elif "role" in delta:
+                    # Handle role-only delta (initial message)
+                    message = ChatResponseMessage(role="assistant")
+                elif "message" in choice:
+                    # Handle OpenAI-style message content
+                    if isinstance(choice["message"], dict):
+                        content_list = choice["message"].get("content", [])
+                        if content_list and isinstance(content_list, list):
+                            content = content_list[0].get("text", "")
+                            if content:
+                                message = ChatResponseMessage(
+                                    role="assistant",
+                                    content=content
+                                )
+            elif "message" in chunk:
+                # Handle direct message in chunk (OpenAI format)
+                if isinstance(chunk["message"], dict):
+                    content_list = chunk["message"].get("content", [])
+                    if content_list and isinstance(content_list, list):
+                        content = content_list[0].get("text", "")
+                        if content:
+                            message = ChatResponseMessage(
+                                role="assistant",
+                                content=content
+                            )
+            elif model_id.startswith("cohere"):
+                if "toolCalls" in chunk:
+                    tool_calls = Convertor.convert_tool_calls_cohere_to_openai(chunk["toolCalls"])
+                    message = ChatResponseMessage(
+                        role="assistant",
+                        tool_calls=tool_calls
+                    )
+                else:
+                    message = ChatResponseMessage(
+                        role="assistant",
+                        content=chunk.get("text", "")
+                    )
+                    
+            elif model_id.startswith("meta"):
+                if "toolCalls" in chunk["message"]:
+                    tool_calls = Convertor.convert_tool_calls_llama_to_openai(chunk["message"]["toolCalls"])
+                    message = ChatResponseMessage(
+                        role="assistant",
+                        tool_calls=tool_calls
+                    )
+                else:
+                    content = chunk["message"].get("content", [{}])[0].get("text", "")
+                    message = ChatResponseMessage(
+                        role="assistant",
+                        content=content
+                    )
+                    
         elif "finishReason" in chunk:
             message = ChatResponseMessage(role="assistant")
             finish_reason = chunk["finishReason"]
+            
             if "toolCalls" in chunk:
-                openai_tool_calls = Convertor.convert_tool_calls_cohere_to_openai(chunk["toolCalls"])
-                message.tool_calls = openai_tool_calls
-                message.content = ""
+                tool_calls = Convertor.convert_tool_calls_cohere_to_openai(chunk["toolCalls"])
+                message.tool_calls = tool_calls
+                message.content = None
 
         if "metadata" in chunk:
             # usage information in metadata.
@@ -541,7 +639,7 @@ class OCIGenAIModel(BaseChatModel):
                     )
                 ],
                 usage=usage,
-                )
+            )
 
         return None
 

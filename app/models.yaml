@@ -1,65 +1,218 @@
 - region: us-chicago-1
-  compartment_id: ocid1.compartment.oc1..xxxxxxxxxxxxxx
+  compartment_id: ocid1.compartment.oc1..aaaaaaaa4s2bygdypxhhvkzlktc3nazfrk4v3kqduzpaquxpo4xpoqdz7xfq
   models:
     ondemand:
 
     # Cohere Command Family
-      - name: cohere.command-latest
-        model_id: cohere.command-a-03-2025
-        tool_call: true
-        stream_tool_call: true
-        description: "Map the latest model id to cohere.command-latest"
-      
       - name: cohere.command-a-03-2025
         model_id: cohere.command-a-03-2025
         tool_call: true
         stream_tool_call: true
-
-      - name: cohere.command-r-plus-08-2024
-        model_id: cohere.command-r-plus-08-2024
-        tool_call: true
-        stream_tool_call: true
+        description: "Cohere Command R - March 2025 (v1.0)"
 
       - name: cohere.command-r-08-2024
         model_id: cohere.command-r-08-2024
         tool_call: true
         stream_tool_call: true
+        description: "Cohere Command R - August 2024 (v1.7)"
 
-    # Meta Llama Family
-      - name: meta.llama-latest
-        model_id: meta.llama-4-maverick-17b-128e-instruct-fp8
+      - name: cohere.command-r-plus-08-2024
+        model_id: cohere.command-r-plus-08-2024
         tool_call: true
         stream_tool_call: true
+        description: "Cohere Command R+ - August 2024 (v1.6)"
 
-      - name: meta.llama-4-maverick-17b-128e-instruct-fp8
-        model_id: meta.llama-4-maverick-17b-128e-instruct-fp8
+    # Meta LLaMA Family
+      - name: meta.llama-3.1-405b-instruct
+        model_id: meta.llama-3.1-405b-instruct
         tool_call: true
         stream_tool_call: true
+        description: "LLaMA 3.1 - 405B Instruct"
 
-      - name: meta.llama-4-scout-17b-16e-instruct
-        model_id: meta.llama-4-scout-17b-16e-instruct
+      - name: meta.llama-3.1-70b-instruct
+        model_id: meta.llama-3.1-70b-instruct
         tool_call: true
         stream_tool_call: true
-        
-      - name: meta.llama-3.3-70b-instruct
-        model_id: meta.llama-3.3-70b-instruct
-        tool_call: true
-        stream_tool_call: true
-
-      - name: meta.llama-3.2-11b-vision-instruct
-        model_id: meta.llama-3.2-11b-vision-instruct
-        tool_call: true
-        stream_tool_call: true
-        multimodal: true
+        description: "LLaMA 3.1 - 70B Instruct"
 
       - name: meta.llama-3.2-90b-vision-instruct
         model_id: meta.llama-3.2-90b-vision-instruct
         tool_call: true
         stream_tool_call: true
         multimodal: true
+        description: "LLaMA 3.2 - 90B Vision Instruct (Multimodal)"
 
+      - name: meta.llama-3.3-70b-instruct
+        model_id: meta.llama-3.3-70b-instruct
+        tool_call: true
+        stream_tool_call: true
+        description: "LLaMA 3.3 - 70B Instruct"
+
+      - name: meta.llama-4-maverick-17b-128e-instruct-fp8
+        model_id: meta.llama-4-maverick-17b-128e-instruct-fp8
+        tool_call: true
+        stream_tool_call: true
+        multimodal: true
+        description: "LLaMA 4 Maverick - 17B FP8 (Multimodal)"
+
+      - name: meta.llama-4-scout-17b-16e-instruct
+        model_id: meta.llama-4-scout-17b-16e-instruct
+        tool_call: true
+        stream_tool_call: true
+        multimodal: true
+        description: "LLaMA 4 Scout - 17B Instruct (Multimodal)"
+
+    # OpenAI GPT Family
+      - name: openai.gpt-4.1
+        model_id: openai.gpt-4.1
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4.1 (latest stable)"
+
+      - name: openai.gpt-4.1-2025-04-14
+        model_id: openai.gpt-4.1-2025-04-14
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4.1 - April 2025"
+
+      - name: openai.gpt-4.1-mini
+        model_id: openai.gpt-4.1-mini
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4.1 Mini"
+
+      - name: openai.gpt-4.1-mini-2025-04-14
+        model_id: openai.gpt-4.1-mini-2025-04-14
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4.1 Mini - April 2025"
+
+      - name: openai.gpt-4.1-nano
+        model_id: openai.gpt-4.1-nano
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4.1 Nano"
+
+      - name: openai.gpt-4.1-nano-2025-04-14
+        model_id: openai.gpt-4.1-nano-2025-04-14
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4.1 Nano - April 2025"
+
+      - name: openai.gpt-4o
+        model_id: openai.gpt-4o
+        tool_call: true
+        stream_tool_call: true
+        multimodal: true
+        description: "OpenAI GPT-4o (Omni, Multimodal)"
+
+      - name: openai.gpt-4o-2024-08-06
+        model_id: openai.gpt-4o-2024-08-06
+        tool_call: true
+        stream_tool_call: true
+        multimodal: true
+        description: "OpenAI GPT-4o - August 2024"
+
+      - name: openai.gpt-4o-2024-11-20
+        model_id: openai.gpt-4o-2024-11-20
+        tool_call: true
+        stream_tool_call: true
+        multimodal: true
+        description: "OpenAI GPT-4o - November 2024"
+
+      - name: openai.gpt-4o-mini
+        model_id: openai.gpt-4o-mini
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4o Mini"
+
+      - name: openai.gpt-4o-mini-2024-07-18
+        model_id: openai.gpt-4o-mini-2024-07-18
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4o Mini - July 2024"
+
+      - name: openai.gpt-4o-mini-search-preview
+        model_id: openai.gpt-4o-mini-search-preview
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4o Mini Search Preview"
+
+      - name: openai.gpt-4o-mini-search-preview-2025-03-11
+        model_id: openai.gpt-4o-mini-search-preview-2025-03-11
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4o Mini Search Preview - March 2025"
+
+      - name: openai.gpt-4o-search-preview
+        model_id: openai.gpt-4o-search-preview
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4o Search Preview"
+
+      - name: openai.gpt-4o-search-preview-2025-03-11
+        model_id: openai.gpt-4o-search-preview-2025-03-11
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI GPT-4o Search Preview - March 2025"
+
+      - name: openai.o1
+        model_id: openai.o1
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI O1 (Generic baseline)"
+
+      - name: openai.o1-2024-12-17
+        model_id: openai.o1-2024-12-17
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI O1 - December 2024"
+
+      - name: openai.o3
+        model_id: openai.o3
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI O3 (Omni Mini?)"
+
+      - name: openai.o3-2025-04-16
+        model_id: openai.o3-2025-04-16
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI O3 - April 2025"
+
+      - name: openai.o3-mini
+        model_id: openai.o3-mini
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI O3 Mini"
+
+      - name: openai.o3-mini-2025-01-31
+        model_id: openai.o3-mini-2025-01-31
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI O3 Mini - Jan 2025"
+
+      - name: openai.o4-mini
+        model_id: openai.o4-mini
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI O4 Mini"
+
+      - name: openai.o4-mini-2025-04-16
+        model_id: openai.o4-mini-2025-04-16
+        tool_call: true
+        stream_tool_call: true
+        description: "OpenAI O4 Mini - April 2025"
 
     embedding:
+      - name: Cohere Multilingual Image v3.0
+        model_id: cohere.embed-multilingual-image-v3.0
+        description: "Provides multilingual classification and embedding support with image."
+
+      - name: Cohere Multilingual Image Light v3.0
+        model_id: cohere.embed-multilingual-light-v3.0
+        description: "Provides multilingual light classification and embedding support with image."
+
       - name: cohere.embed-multilingual-v3.0
         model_id: cohere.embed-multilingual-v3.0
         description: "Provides multilingual classification and embedding support."
@@ -83,24 +236,6 @@
       - name: cohere.embed-multilingual-light-v3.0
         model_id: cohere.embed-multilingual-light-v3.0
         description: "A smaller, faster version of embed-multilingual-v3.0. Almost as capable, but a lot faster. Supports multiple languages."
-
-    dedicated:
-      - name: my-dedicated-model-name
-        endpoint: https://ocid1.generativeaiendpoint....  # endpoint url for dedicated model
-        description: "my dedicated model description"
-
-    datascience:
-      - name: my-datascience-model-name
-        endpoint: https://modeldeployment.xxxxxx/predict  # Model deployment endpoint url
-        description: "my dedicated model description"
-
-- region: us-ashburn-1
-  compartment_id: ocid1.compartment.oc1..xxxxxxxxxxxxxxxx
-  models:
-    datascience:
-      - name: ODSC-Mistral-7B-Instruct
-        endpoint: https://modeldeployment.us-ashburn-1.oci.customer-oci.com/ocid1.datasciencemodeldeployment.oc1.iad.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/predict
-        description: "Data science Model deployment for Mistral 7B Instruct model"
 
 
 # Modify this file to specify the call information of the model.

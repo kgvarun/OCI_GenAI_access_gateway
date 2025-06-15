@@ -381,3 +381,76 @@ class Convertor:
             outputs = [{"result": openai_tool_message.get("content", "")}]
             )
         return cohere_tool_result
+# Converters support for OpenAI models hosted on OCI GenAI service; 
+    @staticmethod
+    def convert_tools_openai_to_oci_openai(openai_tools: list) -> list[oci_models.FunctionDefinition]:
+        """
+        Convert a list of OpenAI function definitions into OCI GenAI FunctionDefinition
+        objects. OCI GenAI's 'ondemand' chat endpoints expect the same shape as
+        OpenAI's `functions` parameter.
+        """
+        oci_tools = []
+        for tool in openai_tools:
+            if tool.type == "function":
+                oci_tool = oci_models.FunctionDefinition(
+                    type="FUNCTION",
+                    name=tool.function.name,
+                    description=tool.function.description,
+                    parameters=tool.function.parameters
+                )
+                oci_tools.append(oci_tool)
+        return oci_tools
+
+    @staticmethod
+    def convert_tool_calls_openai_to_oci_openai(openai_tool_calls) -> list[oci_models.FunctionCall]:
+        """
+        Convert OpenAI function-call requests into OCI GenAI FunctionCall objects.
+        """
+        oci_tool_calls = []
+        for call in openai_tool_calls:
+            if isinstance(call, ToolCall):
+                oci_tool_call = oci_models.FunctionCall(
+                    id=call.id,
+                    type="FUNCTION",
+                    name=call.function.name,
+                    arguments=call.function.arguments
+                )
+                oci_tool_calls.append(oci_tool_call)
+        return oci_tool_calls
+
+    @staticmethod
+    def convert_tool_calls_oci_openai_to_openai(oci_tool_calls) -> list[ToolCall]:
+        """
+        Convert OCI GenAI FunctionCall objects back into OpenAI ToolCall objects,
+        so you can stream the responses out exactly as an OpenAI-compatible API
+        would.
+        """
+        openai_tool_calls = []
+        for call in oci_tool_calls:
+            if isinstance(call, oci_models.FunctionCall):
+                function = ResponseFunction(
+                    name=call.name,
+                    arguments=call.arguments
+                )
+                openai_call = ToolCall(
+                    index=len(openai_tool_calls),
+                    id=call.id,
+                    type="function",
+                    function=function
+                )
+                openai_tool_calls.append(openai_call)
+        return openai_tool_calls
+
+    @staticmethod
+    def convert_tool_result_oci_openai_to_openai(oci_tool_message: dict) -> ToolMessage:
+        """
+        Convert an OCI GenAI service tool-invocation response into an OpenAI
+        ToolMessage.
+        """
+        return ToolMessage(
+            role="tool",
+            tool_call_id=oci_tool_message.get("tool_call_id", ""),
+            content=oci_tool_message.get("content", "")
+        )
+
+
